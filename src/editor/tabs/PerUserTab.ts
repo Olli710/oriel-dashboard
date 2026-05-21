@@ -75,6 +75,17 @@ export function renderPerUserTab(ctx: PerUserTabContext): TemplateResult {
           'Different dashboard layouts per HA user or role. Each user inherits the global config; their overrides win.'}
       </div>
 
+      <div
+        style="background: color-mix(in srgb, var(--warning-color, #ff9800) 12%, transparent); border: 1px solid var(--warning-color, #ff9800); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start;"
+      >
+        <ha-icon icon="mdi:shield-alert-outline" style="--mdc-icon-size: 22px; color: var(--warning-color, #ff9800); flex-shrink: 0; margin-top: 2px;"></ha-icon>
+        <div style="font-size: 0.88rem; line-height: 1.4;">
+          <strong>${localize('editor.per_user_not_acl_title') || 'These are UI defaults, not access control.'}</strong>
+          ${localize('editor.per_user_not_acl_body') ||
+            ' Hiding a view client-side only changes what shows up by default for each user. A user can still reach hidden views by URL, raw YAML edit, or service calls. For actual restrictions (e.g. preventing a "kid" user from unlocking the door) use HA\'s built-in user permissions in Settings → People & zones → user → "Admin".'}
+        </div>
+      </div>
+
       ${ctx.users.length === 0
         ? html`<div class="description" style="color: var(--warning-color);">
             ${localize('editor.per_user_no_discovery') ||

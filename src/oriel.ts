@@ -84,6 +84,13 @@ class Oriel extends HTMLElement {
     await modulesPromise;
     t('modules ready');
 
+    // Namespace usage-tracker storage by HA user id (review §S-6).
+    // On a shared device, each user gets their own usage profile.
+    const userId = (hass as unknown as { user?: { id?: string } })?.user?.id;
+    void import('./utils/usage-tracker').then(({ setActiveUser }) =>
+      setActiveUser(userId),
+    );
+
     const { Registry } = await import('./Registry');
     const { getVisibleAreasFromHass } = await import('./utils/name-utils');
     const { localize } = await import('./utils/localize');

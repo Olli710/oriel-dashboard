@@ -8,7 +8,7 @@
 // ====================================================================
 
 import { html, nothing, type TemplateResult } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { renderLocalized } from '../../utils/safe-localize';
 import type { HomeAssistant } from '../../types/homeassistant';
 import type { OrielConfig } from '../../types/strategy';
 import { localize } from '../../utils/localize';
@@ -126,7 +126,7 @@ export function renderRoomPinsTab(ctx: RoomPinsTabContext): TemplateResult {
             `
           : nothing}
       </div>
-      <div class="description">${unsafeHTML(localize('editor.room_pins_desc'))}</div>
+      <div class="description">${renderLocalized(localize('editor.room_pins_desc'))}</div>
 
       ${ctx.renderCheckbox(
         'room-pins-show-state',

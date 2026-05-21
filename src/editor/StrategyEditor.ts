@@ -7,7 +7,7 @@
 
 import { LitElement, html, css, nothing, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { renderLocalized } from '../utils/safe-localize';
 import yaml from 'js-yaml';
 
 import type { HomeAssistant } from '../types/homeassistant';
@@ -145,9 +145,13 @@ class OrielEditor extends LitElement {
     // Invalidate the area-entities cache when HA replaces the entity
     // registry. Without this, renames / area moves done in HA while
     // the editor is open don't appear until the editor reloads.
+    // Trigger an explicit requestUpdate() — clearing the cache alone
+    // doesn't queue a render because no @state field changed
+    // (review §CQ-3).
     if (hass.entities !== this._areaEntitiesCacheKey) {
       this._areaEntitiesCache.clear();
       this._areaEntitiesCacheKey = hass.entities;
+      this.requestUpdate();
     }
     if (!oldHass) this.requestUpdate();
   }
@@ -1872,7 +1876,7 @@ class OrielEditor extends LitElement {
       })}
       ${showSearchCard && !hasSearchCardDeps
         ? html`<div class="description" style="margin-top: -8px;">
-            <span>&#x26A0;&#xFE0F; ${unsafeHTML(localize('editor.show_search_card_missing'))}</span>
+            <span>&#x26A0;&#xFE0F; ${renderLocalized(localize('editor.show_search_card_missing'))}</span>
           </div>`
         : nothing}
     `;
@@ -3010,12 +3014,12 @@ class OrielEditor extends LitElement {
         if (parsed && typeof parsed === 'object') {
           updated.parsed_config = parsed as Record<string, any>;
         } else {
-          updated._yaml_error = 'YAML muss ein Objekt ergeben';
+          updated._yaml_error = localize('editor.yaml_error_not_object');
           updated.parsed_config = undefined;
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message.split('\n')[0] : 'Ungültiges YAML';
-        updated._yaml_error = message || 'Ungültiges YAML';
+        const message = e instanceof Error ? e.message.split('\n')[0] : localize('editor.yaml_error_invalid');
+        updated._yaml_error = message || localize('editor.yaml_error_invalid');
         updated.parsed_config = undefined;
       }
     } else {
@@ -3103,12 +3107,12 @@ class OrielEditor extends LitElement {
         if (parsed && typeof parsed === 'object') {
           updated.parsed_config = parsed as Record<string, any>;
         } else {
-          updated._yaml_error = 'YAML muss ein Objekt oder Array ergeben';
+          updated._yaml_error = localize('editor.yaml_error_not_object_or_array');
           updated.parsed_config = undefined;
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message.split('\n')[0] : 'Ungültiges YAML';
-        updated._yaml_error = message || 'Ungültiges YAML';
+        const message = e instanceof Error ? e.message.split('\n')[0] : localize('editor.yaml_error_invalid');
+        updated._yaml_error = message || localize('editor.yaml_error_invalid');
         updated.parsed_config = undefined;
       }
     } else {
@@ -3165,12 +3169,12 @@ class OrielEditor extends LitElement {
           // single card → wrap into array for caller convenience
           updated.parsed_config = [parsed as Record<string, any>];
         } else {
-          updated._yaml_error = 'YAML must produce a card or list of cards';
+          updated._yaml_error = localize('editor.yaml_error_not_card_or_list');
           updated.parsed_config = undefined;
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message.split('\n')[0] : 'Invalid YAML';
-        updated._yaml_error = message || 'Invalid YAML';
+        const message = e instanceof Error ? e.message.split('\n')[0] : localize('editor.yaml_error_invalid');
+        updated._yaml_error = message || localize('editor.yaml_error_invalid');
         updated.parsed_config = undefined;
       }
     } else {
@@ -3221,12 +3225,12 @@ class OrielEditor extends LitElement {
         if (parsed && typeof parsed === 'object') {
           updated.parsed_config = parsed as Record<string, any>;
         } else {
-          updated._yaml_error = 'YAML muss ein Objekt ergeben';
+          updated._yaml_error = localize('editor.yaml_error_not_object');
           updated.parsed_config = undefined;
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message.split('\n')[0] : 'Ungültiges YAML';
-        updated._yaml_error = message || 'Ungültiges YAML';
+        const message = e instanceof Error ? e.message.split('\n')[0] : localize('editor.yaml_error_invalid');
+        updated._yaml_error = message || localize('editor.yaml_error_invalid');
         updated.parsed_config = undefined;
       }
     } else {

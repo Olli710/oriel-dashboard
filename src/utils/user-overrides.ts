@@ -17,15 +17,25 @@
 import type { HomeAssistant } from '../types/homeassistant';
 import type { OrielConfig } from '../types/strategy';
 
+/** Keys that must never be merged into target objects — they would
+ * mutate the prototype chain (local-scope pollution). YAML parsers and
+ * JSON.parse can both produce these as regular own properties when an
+ * attacker supplies them, so the merge needs to skip them explicitly. */
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Deep-merge two plain objects. Arrays are REPLACED (not concatenated)
  * — overrides commonly want to specify a fresh list, not append.
  * Returns a new object; inputs are not mutated.
+ *
+ * Prototype-pollution-safe: skips any `__proto__` / `constructor` /
+ * `prototype` keys in the override. See review §S-2.
  */
 export function deepMerge<T extends Record<string, unknown>>(base: T, override: Partial<T>): T {
   if (!override || typeof override !== 'object') return base;
   const out: Record<string, unknown> = { ...base };
   for (const key of Object.keys(override)) {
+    if (DANGEROUS_KEYS.has(key)) continue;
     const b = (base as Record<string, unknown>)[key];
     const o = (override as Record<string, unknown>)[key];
     if (

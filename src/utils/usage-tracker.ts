@@ -1,19 +1,44 @@
 // ====================================================================
-// Usage tracker (v3.5.1)
+// Usage tracker (v3.5.1, per-user namespaced + aged-out v4.5.0)
 // ====================================================================
 // Counts taps per entity in localStorage. After a threshold of total
 // interactions, the editor surfaces a "suggested layout" banner that
 // proposes a `sections_order` derived from where the user actually
 // taps. Per-browser; never sent anywhere.
 //
-// Privacy: all data stays in the user's browser localStorage. Reset
-// via `orielUsageReset()` from devtools or by deleting the
-// `oriel_usage_v1` key.
+// Per-user namespacing (review §S-6): on a shared device (wall tablet,
+// family iPad), each HA user gets their own usage profile. Without
+// this, every user contributes to the same blob and the suggestion
+// banner reflects whoever has used that browser, including former
+// users. The storage key is `oriel_usage_v1:<userId>`; legacy
+// non-namespaced data is migrated to the current user on first read.
+//
+// Age-out: entries older than MAX_AGE_DAYS are dropped on each read.
+// Prevents stale data from a guest who used the tablet weeks ago
+// dragging on current recommendations.
 // ====================================================================
 
-const STORAGE_KEY = 'oriel_usage_v1';
+const STORAGE_KEY_PREFIX = 'oriel_usage_v1';
+const LEGACY_STORAGE_KEY = 'oriel_usage_v1';
 const THRESHOLD = 50; // taps before suggestion surfaces
 const MAX_ENTRIES = 500;
+const MAX_AGE_DAYS = 30;
+
+/** User-scoped storage key. Falls back to a `:anon` namespace when we
+ *  don't have a hass user id yet (early page load). */
+let activeUserId: string | undefined;
+
+/**
+ * Set the active HA user id. Called from the editor / strategy at
+ * mount time. Subsequent reads/writes namespace by this id.
+ */
+export function setActiveUser(userId: string | undefined): void {
+  activeUserId = userId;
+}
+
+function storageKey(): string {
+  return `${STORAGE_KEY_PREFIX}:${activeUserId ?? 'anon'}`;
+}
 
 interface UsageEntry {
   /** Domain count, e.g. "light" → 12 */
@@ -36,16 +61,33 @@ const empty = (): UsageEntry => ({
 function read(): UsageEntry {
   if (typeof localStorage === 'undefined') return empty();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    let raw = localStorage.getItem(storageKey());
+    // Migration: when a user-scoped slot is empty but the legacy key
+    // exists, migrate it once. Only happens on first use post-v4.5.
+    if (!raw && activeUserId) {
+      const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        raw = legacy;
+        localStorage.setItem(storageKey(), legacy);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
+    }
     if (!raw) return empty();
     const parsed = JSON.parse(raw);
     if (typeof parsed !== 'object' || !parsed) return empty();
-    return {
+    const entry: UsageEntry = {
       domains: parsed.domains ?? {},
       entities: parsed.entities ?? {},
       total: parsed.total ?? 0,
       lastTick: parsed.lastTick ?? new Date().toISOString(),
     };
+    // Age-out: drop the whole entry if it's older than MAX_AGE_DAYS.
+    // Coarse but cheap; the user just builds fresh signal afterwards.
+    const ageMs = Date.now() - Date.parse(entry.lastTick);
+    if (Number.isFinite(ageMs) && ageMs > MAX_AGE_DAYS * 24 * 60 * 60 * 1000) {
+      return empty();
+    }
+    return entry;
   } catch {
     return empty();
   }
@@ -54,7 +96,7 @@ function read(): UsageEntry {
 function write(entry: UsageEntry): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
+    localStorage.setItem(storageKey(), JSON.stringify(entry));
   } catch {
     /* quota exceeded or storage disabled */
   }
@@ -78,10 +120,13 @@ export function trackTap(entityId: string | undefined): void {
   write(entry);
 }
 
-/** Reset tracker. Available via window for users who want to clear it. */
+/** Reset tracker for the active user. Available via window. */
 export function reset(): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(storageKey());
+  // Also clear the legacy non-namespaced key in case migration didn't
+  // happen yet.
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
 }
 
 if (typeof window !== 'undefined') {

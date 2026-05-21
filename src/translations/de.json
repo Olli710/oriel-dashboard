@@ -368,6 +368,10 @@
     "badges_select_entity": "Entity auswählen...",
     "badges_remove": "Entfernen",
     "badges_show_name": "Entity-Name auf Badge anzeigen",
-    "badges_name_short": "Name"
+    "badges_name_short": "Name",
+    "yaml_error_invalid": "Ungültiges YAML",
+    "yaml_error_not_object": "YAML muss ein Objekt ergeben",
+    "yaml_error_not_object_or_array": "YAML muss ein Objekt oder Array ergeben",
+    "yaml_error_not_card_or_list": "YAML muss eine Karte oder Liste von Karten ergeben"
   }
 }

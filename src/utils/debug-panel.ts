@@ -99,12 +99,26 @@ function refresh(): void {
   }
   const logEl = root.querySelector('#oriel-debug-log');
   if (logEl) {
-    logEl.innerHTML = buffer.slice().reverse().map((entry) => {
-      const t = (entry.ts / 1000).toFixed(2);
-      const text = entry.message
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      return `<div style="border-bottom:1px solid #2c2c30;padding:3px 0;"><span style="color:#888;">[${t}s]</span> ${text}</div>`;
-    }).join('');
+    // Use DOM APIs + textContent rather than partial-escape + innerHTML.
+    // Earlier impl escaped only `<` and `>`; missed `&`, `"`, `'`, and
+    // — more importantly — was fragile to future debugLog() callers
+    // passing user-controlled strings (config values, entity friendly
+    // names). textContent handles every escape automatically.
+    // Closes review §S-5.
+    logEl.replaceChildren(
+      ...buffer
+        .slice()
+        .reverse()
+        .map((entry) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'border-bottom:1px solid #2c2c30;padding:3px 0;';
+          const ts = document.createElement('span');
+          ts.style.color = '#888';
+          ts.textContent = `[${(entry.ts / 1000).toFixed(2)}s] `;
+          row.appendChild(ts);
+          row.appendChild(document.createTextNode(entry.message));
+          return row;
+        }),
+    );
   }
 }

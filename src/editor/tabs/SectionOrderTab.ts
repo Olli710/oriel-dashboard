@@ -480,6 +480,13 @@ function renderVisibilityRules(ctx: SectionOrderTabContext): TemplateResult {
         <div class="description" style="margin-left: 0; margin-bottom: 8px;">
           ${localize('editor.section_visibility_desc')}
         </div>
+        <div
+          style="background: color-mix(in srgb, var(--warning-color, #ff9800) 12%, transparent); border: 1px solid var(--warning-color, #ff9800); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.85rem; line-height: 1.4;"
+        >
+          <strong>${localize('editor.visibility_not_acl') || 'UI default, not access control.'}</strong>
+          ${localize('editor.visibility_not_acl_body') ||
+            ' These rules only hide sections from the rendered dashboard. Users can still reach hidden content via URL, raw YAML, or service calls. Use HA\'s user permissions for actual restrictions.'}
+        </div>
         ${ctx.order.map((key) => {
           const meta = ctx.sectionMeta.get(key);
           if (!meta) return nothing;

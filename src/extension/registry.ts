@@ -100,10 +100,29 @@ export function listBadges(): BadgeExtensionSpec[] {
   return [...badgeRegistry.values()];
 }
 
+/** Max wall-clock per plugin build() call. A buggy or hostile plugin that
+ *  hangs (returns `await new Promise(() => {})`, fetches a slow endpoint,
+ *  etc.) must not stall the whole dashboard generate(). Closes review §S-4. */
+const EXTENSION_BUILD_TIMEOUT_MS = 2000;
+
+/** Race a promise against a timeout that rejects with a tagged error. */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([p, timeoutPromise]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
+
 /**
  * Build every registered section in registry-insertion order. Failed
- * builds (rejected promises, thrown sync errors) are logged + skipped
- * — a buggy plugin must not break the dashboard.
+ * builds (rejected promises, thrown sync errors, OR timeouts) are
+ * logged + skipped — a buggy plugin must not break the dashboard.
  */
 export async function buildExtensionSections(
   ctx: ExtensionContext,
@@ -111,7 +130,11 @@ export async function buildExtensionSections(
   const out: LovelaceSectionConfig[] = [];
   for (const spec of sectionRegistry.values()) {
     try {
-      const result = await spec.build(ctx);
+      const result = await withTimeout(
+        Promise.resolve(spec.build(ctx)),
+        EXTENSION_BUILD_TIMEOUT_MS,
+        `extension section "${spec.key}"`,
+      );
       if (result) out.push(result);
     } catch (err) {
       console.warn(`[oriel] extension section "${spec.key}" failed:`, err);
@@ -126,7 +149,11 @@ export async function buildExtensionBadges(
   const out: LovelaceBadgeConfig[] = [];
   for (const spec of badgeRegistry.values()) {
     try {
-      const result = await spec.build(ctx);
+      const result = await withTimeout(
+        Promise.resolve(spec.build(ctx)),
+        EXTENSION_BUILD_TIMEOUT_MS,
+        `extension badge "${spec.key}"`,
+      );
       if (result) out.push(result);
     } catch (err) {
       console.warn(`[oriel] extension badge "${spec.key}" failed:`, err);

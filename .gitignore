@@ -1,6 +1,5 @@
 node_modules/
-dist/oriel.js
-dist/oriel.js.map
+dist/
 .DS_Store
 coverage/
 playwright-report/

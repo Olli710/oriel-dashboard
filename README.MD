@@ -196,6 +196,8 @@ strategy:
       override: { show_security_summary: false, show_routines_section: false }
 ```
 
+> **These are UI defaults, not access control.** Hiding `show_security_summary` from the "kid" role only changes what their dashboard shows by default. They can still reach the security view by URL, edit the dashboard YAML, or call `lock.unlock` via WebSocket from devtools. For real restrictions, use HA's built-in user permissions: **Settings → People & zones → user → "Admin"** toggle, and HA's entity-level access controls. Oriel's per-user config is for layout personalisation, not security boundaries.
+
 ### Today-vs-yesterday tile
 
 ```yaml

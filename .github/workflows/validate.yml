@@ -56,7 +56,7 @@ jobs:
         run: node scripts/lint-translations.mjs
 
   audit:
-    name: npm audit (high+)
+    name: npm audit (moderate+)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -65,10 +65,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
-      # Surfaces high + critical advisories. Non-prod deps are excluded
-      # so a vitest dev-only vulnerability doesn't block the release
-      # pipeline, but anything user-installable through HACS gates here.
-      - run: npm audit --audit-level=high --omit=dev
+      # Surfaces moderate + high + critical advisories on production
+      # deps. Non-prod deps are excluded so a vitest dev-only
+      # vulnerability doesn't block the release pipeline, but anything
+      # user-installable through HACS gates here (review §B-2).
+      - run: npm audit --audit-level=moderate --omit=dev
 
   bundle-size:
     name: Bundle size budget

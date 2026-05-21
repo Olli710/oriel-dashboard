@@ -368,6 +368,10 @@
     "badges_select_entity": "Select entity...",
     "badges_remove": "Remove",
     "badges_show_name": "Show entity name on badge",
-    "badges_name_short": "Name"
+    "badges_name_short": "Name",
+    "yaml_error_invalid": "Invalid YAML",
+    "yaml_error_not_object": "YAML must produce an object",
+    "yaml_error_not_object_or_array": "YAML must produce an object or an array",
+    "yaml_error_not_card_or_list": "YAML must produce a card or a list of cards"
   }
 }
