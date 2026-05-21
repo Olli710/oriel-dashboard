@@ -1,11 +1,7 @@
-PERFORMANCE-AUDIT.md
-Session-Summary.md
 node_modules/
-.idea/
 dist/oriel.js
 dist/oriel.js.map
 .DS_Store
-.codacy/
 coverage/
 playwright-report/
 test-results/
