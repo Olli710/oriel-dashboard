@@ -127,6 +127,24 @@ export interface OrielBackgroundConfig {
   attachment?: 'scroll' | 'fixed';
 }
 
+// -- Favorites (simon42#131) ------------------------------------------
+// A favorite can be a bare entity id (always shown) or an object that
+// carries a state condition, so it only appears when relevant (e.g.
+// washing machine only while running). Emitted as the tile's native HA
+// `visibility`, so HA shows/hides it reactively — no custom logic.
+
+export interface FavoriteEntityConfig {
+  entity: string;
+  /** Show only when the entity's OWN state matches this (string or any-of array). */
+  show_when?: string | string[];
+  /** Raw HA card visibility conditions (advanced; allows cross-entity rules).
+   *  Takes precedence over show_when when set. */
+  visibility?: Array<Record<string, unknown>>;
+}
+
+/** A favorites list entry: a bare entity id, or a conditional config. */
+export type FavoriteEntityEntry = string | FavoriteEntityConfig;
+
 // -- Main Strategy Config ---------------------------------------------
 
 export interface OrielConfig {
@@ -607,12 +625,36 @@ export interface OrielConfig {
    *     tablet:  [light.living, lock.front]
    *     wall:    [light.living, climate.bedroom] # large screen
    *
+   * v4.13: entries may be state-conditional (simon42#131) — an entry can
+   * be a bare id (always shown) OR an object:
+   *   favorite_entities:
+   *     - light.living                          # always
+   *     - entity: switch.washing_machine
+   *       show_when: 'on'                        # only while running
+   *     - entity: vacuum.roborock
+   *       show_when: ['cleaning', 'returning']   # any-of states
+   *     - entity: alarm_control_panel.home       # cross-entity rule
+   *       visibility:
+   *         - condition: state
+   *           entity: input_select.house_mode
+   *           state: night
+   * show_when is a shorthand for a self-state HA `visibility` condition;
+   * `visibility` passes raw HA conditions through. Emitted as the tile's
+   * native `visibility`, so HA shows/hides it reactively.
+   *
    * The legacy `string[]` shape still works; existing dashboards
    * aren't affected.
    */
+  // Entries accept a bare entity id OR a { entity, show_when?, visibility? }
+  // object for state-conditional favorites (simon42#131).
   favorite_entities?:
-    | string[]
-    | { default?: string[]; phone?: string[]; tablet?: string[]; wall?: string[] };
+    | FavoriteEntityEntry[]
+    | {
+        default?: FavoriteEntityEntry[];
+        phone?: FavoriteEntityEntry[];
+        tablet?: FavoriteEntityEntry[];
+        wall?: FavoriteEntityEntry[];
+      };
   room_pin_entities?: string[];
   security_extra_entities?: string[];
   light_favorite_entities?: string[]; // light.* glance row on overview (originally upstream simon42#176)
