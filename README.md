@@ -17,7 +17,7 @@ Built on the foundation [simon42-dashboard-strategy](https://github.com/TheRealS
 Via HACS (custom repository):
 
 1. HACS → Frontend → ⋮ → Custom repositories
-2. Add `https://github.com/TheDave94/oriel-dashboard`, category **Lovelace**
+2. Add `https://github.com/TheDave94/oriel-dashboard`, category **Dashboard**
 3. Install **Oriel Dashboard**
 4. Reload Home Assistant when HACS prompts you
 
@@ -56,7 +56,7 @@ Ten custom cards and two tile features. Oriel emits them automatically where the
 - `oriel-routines-card` — scenes and scripts ranked by last-used
 - `oriel-notification-card` — sticky banner for smoke, leak, doorbell, and other alerts
 - `oriel-screensaver-card` — wall-panel idle screen
-- `oriel-voice-fab-card` — floating Assist voice button
+- `oriel-voice-fab` — floating Assist voice button
 - `oriel-pollen-card` — pollen levels from the [PollenWatch](https://github.com/TheDave94/pollenwatch) integration
 
 **Tile features**

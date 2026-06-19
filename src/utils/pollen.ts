@@ -6,7 +6,7 @@
 // and pure functions, never builds dependencies on Registry from here
 // (Registry isn't initialised inside the card itself).
 //
-// PollenWatch v2 exposes one analytics layer plus six raw sources, each
+// PollenWatch v3 exposes one analytics layer plus six raw sources, each
 // emitting one sensor per pollen species:
 //
 //   sensor.pollenwatch_analytics_<species>_consensus    (enum state)
@@ -23,7 +23,7 @@
 //   - analytics: the consensus sensor's STATE is the enum
 //     (`none`/`low`/`high`/`mixed`). `mixed` is analytics-only — sources
 //     disagree by >1 level. Read directly from `state.state`.
-//   - raw sources: the integration v2.1+ writes the authoritative bucket
+//   - raw sources: the integration writes the authoritative bucket
 //     onto `state.attributes.level_label` (`"none"`/`"low"`/`"high"` or
 //     null). Read that attribute — never re-bucket the raw number.
 //
