@@ -26,8 +26,8 @@ if [[ -z "$HARNESS_DIR" || ! -f "$HARNESS_DIR/docker-compose.yml" ]]; then
   exit 1
 fi
 
-echo "==> bringing up ha-demo-harness ($HARNESS_DIR)"
-( cd "$HARNESS_DIR" && docker compose up -d )
+echo "==> bringing up ha-demo-harness ($HARNESS_DIR) (--build picks up seed changes)"
+( cd "$HARNESS_DIR" && docker compose up -d --build )
 
 TOKEN_FILE="$HARNESS_DIR/seed/.storage/.PUBLIC_TOKEN"
 [[ -f "$TOKEN_FILE" ]] || { echo "public token not found at $TOKEN_FILE" >&2; exit 1; }
@@ -45,6 +45,16 @@ for _ in $(seq 1 60); do
   sleep 3
 done
 echo "    history points: ${pts:-0}"
+
+# Deploy the CURRENT Oriel build over the demo's baked copy (the no-cache static
+# route in harness_seed is built for exactly this), so the shots reflect HEAD —
+# including the air-quality card — not the version pinned in the demo image.
+echo "==> deploying current Oriel dist into the demo"
+if [[ -f "$HERE/../../dist/oriel.js" ]]; then
+  ( cd "$HARNESS_DIR" && docker compose cp "$HERE/../../dist/." demo-ha:/config/www/community/oriel-dashboard/ )
+else
+  echo "    dist/ not built — run 'npm run build' first" >&2; exit 1
+fi
 
 echo "==> rendering shots"
 HA_URL="$HA_URL" HA_TOKEN="$TOKEN" node "$HERE/shoot.mjs"

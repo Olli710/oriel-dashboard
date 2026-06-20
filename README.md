@@ -44,7 +44,7 @@ Everything else is reached through the **strategy editor** (Edit dashboard → �
 
 ## What ships
 
-Ten custom cards and two tile features. Oriel emits them automatically where they fit; you can also place them by hand inside `custom_cards` or `favorites`.
+Eleven custom cards and two tile features. Oriel emits them automatically where they fit; you can also place them by hand inside `custom_cards` or `favorites`.
 
 **Cards**
 
@@ -58,6 +58,7 @@ Ten custom cards and two tile features. Oriel emits them automatically where the
 - `oriel-screensaver-card` — wall-panel idle screen
 - `oriel-voice-fab` — floating Assist voice button
 - `oriel-pollen-card` — pollen levels, **auto-detected** from the [PollenWatch](https://github.com/TheDave94/pollenwatch) integration (rendered as a first-party card, no manual config)
+- `oriel-air-quality-card` — multi-source air quality, **auto-detected** from the [AirWatch](https://github.com/TheDave94/airwatch) integration: worst sub-index, per-pollutant consensus, an N-of-M source badge, and explicit divergence (rendered as a first-party card, no manual config)
 
 **Tile features**
 
@@ -172,9 +173,11 @@ multi-source Home Assistant integrations:
 - **[PollenWatch](https://github.com/TheDave94/pollenwatch)** — a pollen
   integration that Oriel **auto-detects** and renders as a first-party pollen
   card + badges, with no manual card configuration.
-- **[AirWatch](https://github.com/TheDave94/airwatch)** — an air-quality
-  integration sharing PollenWatch's architecture. Oriel is designed to complement
-  it; a first-party AirWatch air-quality card is *planned* (not yet shipped).
+- **[AirWatch](https://github.com/TheDave94/airwatch)** — a multi-source
+  air-quality integration sharing PollenWatch's architecture. Oriel
+  **auto-detects** it and renders a first-party air-quality card — worst
+  sub-index, per-pollutant consensus, an N-of-M source badge, and explicit
+  divergence — with no manual card configuration.
 
 ## License
 

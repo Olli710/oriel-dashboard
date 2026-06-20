@@ -37,7 +37,21 @@ const OPTIONAL = [
   { key: 'pollenwatch', kind: 'integration', domain: 'pollenwatch' },
   { key: 'bubble',      kind: 'resource',    urlIncludes: 'bubble-card' },
   { key: 'apexcharts',  kind: 'resource',    urlIncludes: 'apexcharts-card', headlessUnrenderable: true },
-  // Future: { key: 'airwatch', kind: 'integration', domain: 'airwatch' },
+  // AirWatch is surfaced via synthetic states staged by harness_seed (no real
+  // integration); FLOOR removes them so the card genuinely disappears. The
+  // engineered dataset hits divergence (ozone), CO honesty, the N/M badges and
+  // the worst-sub-index headline — see ha-demo-harness harness_seed AIRWATCH_STATES.
+  { key: 'airwatch', kind: 'states', entities: [
+    'sensor.airwatch_analytics_pm2_5_consensus',
+    'sensor.airwatch_analytics_pm10_consensus',
+    'sensor.airwatch_analytics_nitrogen_dioxide_consensus',
+    'sensor.airwatch_analytics_ozone_consensus',
+    'sensor.airwatch_analytics_sulphur_dioxide_consensus',
+    'sensor.airwatch_analytics_carbon_monoxide_consensus',
+    'sensor.airwatch_analytics_european_aqi_consensus',
+    'binary_sensor.airwatch_analytics_ozone_divergence',
+    'sensor.airwatch_analytics_overall',
+  ] },
 ];
 
 // ---------- HA WebSocket (lovelace resources) ----------
@@ -83,6 +97,13 @@ async function entityCount(domainPrefix) {
   return (states || []).filter((s) => s.entity_id.startsWith(domainPrefix)).length;
 }
 
+async function removeStates(entities) {
+  for (const id of entities) await rest(`/api/states/${id}`, { method: 'DELETE' });
+  // wait for the airwatch entities to actually clear
+  for (let i = 0; i < 20 && (await entityCount('sensor.airwatch_')) > 0; i++) await sleep(1000);
+  return await entityCount('sensor.airwatch_');
+}
+
 async function removeComponents(conn, comps) {
   for (const c of comps) {
     if (c.kind === 'resource') {
@@ -93,6 +114,9 @@ async function removeComponents(conn, comps) {
       // wait for the entities to actually clear from state
       for (let i = 0; i < 20 && (await entityCount(`sensor.${c.domain}_`)) > 0; i++) await sleep(1000);
       console.log(`   - integration ${c.key}: ${ok ? 'removed' : 'absent'} (sensor.${c.domain}_* left: ${await entityCount(`sensor.${c.domain}_`)})`);
+    } else if (c.kind === 'states') {
+      const left = await removeStates(c.entities);
+      console.log(`   - states ${c.key}: removed ${c.entities.length} entities (sensor.airwatch_* left: ${left})`);
     }
   }
 }
@@ -109,7 +133,7 @@ async function newPage(browser, viewport) {
   return ctx.newPage();
 }
 
-async function renderDashboard(browser, name) {
+async function renderDashboard(browser, name, expectAir) {
   const page = await newPage(browser, { width: 1100, height: 1400 });
   const errs = [];
   page.on('pageerror', (e) => errs.push(String(e.message)));
@@ -117,18 +141,24 @@ async function renderDashboard(browser, name) {
   await page.waitForTimeout(9000);
   try { await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch {}
 
-  // audit: which oriel surfaces rendered + assert NO air-quality card (it doesn't exist yet)
+  // audit: which oriel surfaces rendered + the air-quality card presence
   const audit = await page.evaluate(() => {
     const deep = (sel) => { const out = new Set(); const walk = (r) => { if (!r || !r.querySelectorAll) return; r.querySelectorAll(sel).forEach((e) => out.add(e.tagName.toLowerCase())); r.querySelectorAll('*').forEach((e) => e.shadowRoot && walk(e.shadowRoot)); }; walk(document); return [...out]; };
-    return {
-      pollen: deep('oriel-pollen-card').length,
-      sparkSvg: deep('svg.spark').length,
-      air: deep('oriel-air-quality-card, [class*="airwatch"], [class*="air-quality"]'),
-    };
+    const airRoot = (() => { let found = null; const walk = (r) => { if (found || !r || !r.querySelectorAll) return; const el = r.querySelector('oriel-air-quality-card'); if (el) { found = el; return; } r.querySelectorAll('*').forEach((e) => e.shadowRoot && walk(e.shadowRoot)); }; walk(document); return found; })();
+    const airDetail = airRoot && airRoot.shadowRoot ? {
+      rows: airRoot.shadowRoot.querySelectorAll('.row').length,
+      differ: airRoot.shadowRoot.querySelectorAll('.differ').length,
+      coNote: airRoot.shadowRoot.querySelectorAll('.co-note').length,
+      headline: airRoot.shadowRoot.querySelector('.headline')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    } : null;
+    return { pollen: deep('oriel-pollen-card').length, sparkSvg: deep('svg.spark').length, air: deep('oriel-air-quality-card'), airDetail };
   });
   await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
-  console.log(`   ${name}: pollen=${audit.pollen} sparkSvg=${audit.sparkSvg} air=${JSON.stringify(audit.air)} errs=${errs.length}`);
-  if (audit.air.length) throw new Error(`air-quality card present in ${name} — must not exist yet!`);
+  console.log(`   ${name}: pollen=${audit.pollen} sparkSvg=${audit.sparkSvg} air=${JSON.stringify(audit.air)} detail=${JSON.stringify(audit.airDetail)} errs=${errs.length}`);
+  // Honesty hold (inverted now the card exists + is verified): the air-quality
+  // card MUST appear in the WITH tier and MUST be absent in FLOOR.
+  if (expectAir && audit.air.length === 0) throw new Error(`air-quality card MISSING in ${name} — WITH tier must show it!`);
+  if (!expectAir && audit.air.length > 0) throw new Error(`air-quality card present in ${name} — FLOOR tier must not show it!`);
   await page.close();
 }
 
@@ -169,12 +199,12 @@ async function main() {
   // WITH tier: keep all detectable components; only drop the headless-unrenderable one
   console.log('==> WITH tier (optional components present)');
   await removeComponents(conn, OPTIONAL.filter((c) => c.headlessUnrenderable));
-  await renderDashboard(browser, 'dashboard-with');
+  await renderDashboard(browser, 'dashboard-with', true);
 
   // FLOOR tier: genuinely remove the remaining optional components
   console.log('==> FLOOR tier (optional components removed)');
   await removeComponents(conn, OPTIONAL.filter((c) => !c.headlessUnrenderable));
-  await renderDashboard(browser, 'dashboard-floor');
+  await renderDashboard(browser, 'dashboard-floor', false);
 
   console.log('==> editor');
   await renderEditor(browser);
